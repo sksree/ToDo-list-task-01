@@ -2,6 +2,9 @@ body{
   background: #c5c5c7d1;
   font-family: Arial, sans-serif;
   text-align: center;
+  display: flex;                  
+  justify-content: center;         
+  align-items: center; 
   
 }
 
