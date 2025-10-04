@@ -1,42 +1,119 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <title>TO-DO List</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Products → Purchase on WhatsApp</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 24px; }
+    .products { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; }
+    .card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
+    .card h3{ margin: 0 0 8px; }
+    .controls { margin-top: 12px; display:flex; gap:8px; align-items:center; }
+    .purchase-btn { padding: 8px 12px; border: none; border-radius:6px; cursor:pointer; background:#25D366; color: #fff; }
+    .purchase-btn[disabled]{ opacity: .5; cursor: not-allowed; }
+    .selected { outline: 3px solid rgba(37,211,102,.12); }
+  </style>
+</head>
+<body>
 
-   <div class="card" style="width: 600px;">
-    <div id="todo-container">
-      <div id="header">
-        <h1>To Do List</h1>
-      </div>
+  <h1>Products</h1>
+  <p>Select a product, set quantity, then click <strong>Purchase via WhatsApp</strong>.</p>
 
-      <div id="todo-form">
-        <input
-          type="text"
-          class="input-item"
-          name="input_box"
-          id="input-box"
-          placeholder="Add Task"
-        />
-        <button id="input-button" onclick="addTask()">Add</button>
-      </div>
-
-      <h2>Task List</h2>
-      <ul id="list-container"></ul>
-
-      <hr>
-
-      <div class="counter-container">
-        <div id="task-counters">
-          Completed: <span id="completed-counter">0</span> | Uncompleted:
-          <span id="uncompleted-counter">0</span>
-        </div>
+  <div class="products" id="products">
+    <!-- each product card stores metadata via data- attributes -->
+    <div class="card" data-id="SKU001" data-name="Blue T-shirt" data-price="499" data-currency="INR">
+      <h3>Blue T-shirt</h3>
+      <div>Price: ₹499</div>
+      <div class="controls">
+        <label>Qty: <input type="number" value="1" min="1" class="qty" /></label>
+        <button class="purchase-btn btn" data-phone="+919876543210">Purchase via WhatsApp</button>
       </div>
     </div>
-   </div>
-    <script  src="javascript.js"></script>
-  </body>
+
+    <div class="card" data-id="SKU002" data-name="Canvas Tote Bag" data-price="299" data-currency="INR">
+      <h3>Canvas Tote Bag</h3>
+      <div>Price: ₹299</div>
+      <div class="controls">
+        <label>Qty: <input type="number" value="1" min="1" class="qty" /></label>
+        <button class="purchase-btn btn" data-phone="+919876543210">Purchase via WhatsApp</button>
+      </div>
+    </div>
+
+    <!-- add more product cards similarly -->
+  </div>
+
+<script>
+/*
+ Behavior:
+ - Each "Purchase via WhatsApp" button builds a message from the card's data attributes and the qty.
+ - It then opens WhatsApp using the wa.me link (works on mobile or desktop -> WhatsApp Web).
+ - Make sure data-phone is in international format without + or spaces for wa.me, but api also accepts +; we'll strip spaces.
+*/
+
+function normalizePhone(phone) {
+  // remove spaces, dashes, and leading +
+  return phone.replace(/[+\s\-()]/g,'');
+}
+
+function buildWhatsAppURL(phone, text) {
+  // Use wa.me for short link; text should be encoded.
+  // Example: https://wa.me/919876543210?text=Hello%20there
+  const cleaned = normalizePhone(phone);
+  return 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(text);
+}
+
+document.querySelectorAll('.card').forEach(card => {
+  const btn = card.querySelector('.purchase-btn');
+  const qtyInput = card.querySelector('.qty');
+
+  btn.addEventListener('click', (e) => {
+    const productId = card.dataset.id || '';
+    const name = card.dataset.name || '';
+    const price = card.dataset.price || '';
+    const currency = card.dataset.currency || '';
+    let qty = Number(qtyInput.value) || 1;
+
+    // Optional: clamp qty to >=1
+    if (qty < 1) qty = 1;
+
+    // Build message — customize as needed
+    const pageUrl = window.location.href.split('#')[0];
+    const messageLines = [
+      `Hello 👋, I'm interested in purchasing this product:`,
+      `Product: ${name}`,
+      `Product ID: ${productId}`,
+      `Quantity: ${qty}`,
+      `Price (per unit): ${currency ? currency + ' ' + price : price}`,
+      '',
+      `Page: ${pageUrl}`,
+      '',
+      `Delivery address:`,
+      `(Please add your delivery address here)`,
+      '',
+      `Preferred payment method: (COD / UPI / Card)`,
+    ];
+
+    const finalMessage = messageLines.join('\n');
+
+    // phone number: prefer data-phone on button, otherwise fallback to global sellerPhone
+    const phone = btn.dataset.phone || window.sellerPhone || '';
+    if (!phone) {
+      alert('Seller phone number is not configured.');
+      return;
+    }
+
+    const waUrl = buildWhatsAppURL(phone, finalMessage);
+
+    // open in new tab/window — this will open WhatsApp app on mobile, or WhatsApp Web on desktop.
+    window.open(waUrl, '_blank');
+  });
+
+  // Optional: highlight selected card when user focuses qty or hovers
+  card.addEventListener('mouseenter', () => card.classList.add('selected'));
+  card.addEventListener('mouseleave', () => card.classList.remove('selected'));
+});
+</script>
+
+</body>
 </html>
